@@ -171,7 +171,6 @@
       transform: translateY(1px);
     }
 
-    /* Results */
     .results-header {
       display: flex;
       justify-content: space-between;
@@ -224,7 +223,44 @@
       color: #9ca3af;
       padding: 10px 4px;
     }
+
+    /* Summary metrics */
+    .summary-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+      margin-bottom: 6px;
+    }
+    @media (max-width: 900px) {
+      .summary-metrics {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+      }
+    }
+    .summary-metrics-item {
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #f3f4f6;
+    }
+    .summary-metrics-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin-bottom: 2px;
+    }
+    .summary-metrics-value {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .summary-metrics-sub {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
   </style>
+
+  <!-- Chart.js for the graph -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header>
@@ -263,7 +299,12 @@
           </div>
         </div>
 
-        <div style="overflow-x:auto; max-height: 540px; overflow-y:auto;">
+        <!-- High-level summary metrics -->
+        <div id="summaryMetrics" class="summary-metrics">
+          <!-- Filled by JS -->
+        </div>
+
+        <div style="overflow-x:auto; max-height: 320px; overflow-y:auto; margin-top: 6px;">
           <table id="resultsTable">
             <thead>
               <tr>
@@ -287,6 +328,19 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Graph section -->
+        <div style="margin-top: 12px;">
+          <label style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; display:block; margin-bottom:4px;">
+            Monthly Cash Flow (Best Proposal)
+          </label>
+          <div style="height: 210px;">
+            <canvas id="costChart"></canvas>
+          </div>
+          <p class="hint">
+            Graph shows modeled monthly collected rent (after free rent) for the proposal with the lowest net effective rent.
+          </p>
+        </div>
       </section>
     </div>
   </main>
@@ -298,8 +352,11 @@
     const resetBtn = document.getElementById("resetBtn");
     const resultsBodyEl = document.getElementById("resultsBody");
     const summaryPillEl = document.getElementById("summaryPill");
+    const summaryMetricsEl = document.getElementById("summaryMetrics");
+    const costChartCanvas = document.getElementById("costChart");
 
     let proposalCounter = 0;
+    let costChart = null; // Chart.js instance
 
     function createProposalCard(defaultName) {
       proposalCounter++;
@@ -370,7 +427,7 @@
     }
 
     function removeProposal(id) {
-      const card = proposalListEl.querySelector(`[data-proposal-id="${id}"]`);
+      const card = proposalListEl.querySelector(\`[data-proposal-id="\${id}"]\`);
       if (card) {
         proposalListEl.removeChild(card);
       }
@@ -384,18 +441,20 @@
 
     function collectProposals() {
       const cards = Array.from(proposalListEl.querySelectorAll(".proposal-card"));
-      return cards.map(card => {
-        return {
-          name: card.querySelector(".proposal-name").value.trim() || "Untitled",
-          rsf: parseNumber(card.querySelector(".rsf")),
-          termYears: parseNumber(card.querySelector(".termYears")),
-          startRent: parseNumber(card.querySelector(".startRent")), // $/RSF/yr
-          bumpPct: parseNumber(card.querySelector(".bumpPct")) / 100, // decimal
-          freeRentMonths: parseNumber(card.querySelector(".freeRentMonths")),
-          discRate: parseNumber(card.querySelector(".discRate")) / 100, // decimal per year
-          tiPerRSF: parseNumber(card.querySelector(".tiPerRSF")) // $/RSF
-        };
-      }).filter(p => p.rsf > 0 && p.termYears > 0 && p.startRent > 0);
+      return cards
+        .map(card => {
+          return {
+            name: card.querySelector(".proposal-name").value.trim() || "Untitled",
+            rsf: parseNumber(card.querySelector(".rsf")),
+            termYears: parseNumber(card.querySelector(".termYears")),
+            startRent: parseNumber(card.querySelector(".startRent")), // $/RSF/yr
+            bumpPct: parseNumber(card.querySelector(".bumpPct")) / 100, // decimal
+            freeRentMonths: parseNumber(card.querySelector(".freeRentMonths")),
+            discRate: parseNumber(card.querySelector(".discRate")) / 100, // decimal per year
+            tiPerRSF: parseNumber(card.querySelector(".tiPerRSF")) // $/RSF
+          };
+        })
+        .filter(p => p.rsf > 0 && p.termYears > 0 && p.startRent > 0);
     }
 
     function runModel() {
@@ -409,6 +468,11 @@
           </tr>
         `;
         summaryPillEl.textContent = "No valid proposals to model.";
+        summaryMetricsEl.innerHTML = "";
+        if (costChart) {
+          costChart.destroy();
+          costChart = null;
+        }
         return;
       }
 
@@ -418,6 +482,7 @@
 
         let pvRent = 0;
         let totalRentCollected = 0;
+        const monthlySeries = [];
 
         for (let m = 1; m <= months; m++) {
           const yearIndex = Math.floor((m - 1) / 12);
@@ -429,6 +494,7 @@
           const collectedRent = isFree ? 0 : scheduledRent;
 
           totalRentCollected += collectedRent;
+          monthlySeries.push(collectedRent);
 
           if (monthlyDiscRate > 0) {
             const discFactor = Math.pow(1 + monthlyDiscRate, m);
@@ -444,6 +510,7 @@
           p.rsf > 0 && p.termYears > 0
             ? pvNetOfTI / (p.rsf * p.termYears)
             : 0;
+        const avgMonthlyCost = months > 0 ? totalRentCollected / months : 0;
 
         return {
           ...p,
@@ -452,7 +519,9 @@
           totalRentCollected,
           totalTI,
           pvNetOfTI,
-          nerPerRSFPerYear
+          nerPerRSFPerYear,
+          avgMonthlyCost,
+          monthlySeries
         };
       });
 
@@ -465,6 +534,9 @@
           bestIndex = idx;
         }
       });
+
+      // Populate table
+      const formatCurrency0 = (val) => Math.round(val).toLocaleString();
 
       resultsBodyEl.innerHTML = "";
       results.forEach((r, idx) => {
@@ -482,8 +554,8 @@
           <td>${r.startRent.toFixed(2)}</td>
           <td>${r.freeRentMonths}</td>
           <td>${r.tiPerRSF.toFixed(0)}</td>
-          <td>${r.pvRent.toFixed(0).toLocaleString()}</td>
-          <td>${r.pvNetOfTI.toFixed(0).toLocaleString()}</td>
+          <td>$${formatCurrency0(r.pvRent)}</td>
+          <td>$${formatCurrency0(r.pvNetOfTI)}</td>
           <td>${r.nerPerRSFPerYear.toFixed(2)}</td>
         `;
         resultsBodyEl.appendChild(tr);
@@ -496,6 +568,91 @@
               bestIndex
             ].nerPerRSFPerYear.toFixed(2)}/RSF/yr.`
           : "");
+
+      updateSummaryMetrics(results, bestIndex);
+      updateCostChart(results, bestIndex);
+    }
+
+    function updateSummaryMetrics(results, bestIndex) {
+      if (!results.length) {
+        summaryMetricsEl.innerHTML = "";
+        return;
+      }
+
+      const totalPVAll = results.reduce((sum, r) => sum + r.pvRent, 0);
+      const totalRentAll = results.reduce((sum, r) => sum + r.totalRentCollected, 0);
+      const best = bestIndex >= 0 ? results[bestIndex] : results[0];
+
+      summaryMetricsEl.innerHTML = `
+        <div class="summary-metrics-item">
+          <div class="summary-metrics-label">Total PV of Rent (All Proposals)</div>
+          <div class="summary-metrics-value">$${Math.round(totalPVAll).toLocaleString()}</div>
+          <div class="summary-metrics-sub">Sum of discounted rent across all modeled options</div>
+        </div>
+        <div class="summary-metrics-item">
+          <div class="summary-metrics-label">Best Proposal – Total PV of Rent</div>
+          <div class="summary-metrics-value">$${Math.round(best.pvRent).toLocaleString()}</div>
+          <div class="summary-metrics-sub">${best.name}</div>
+        </div>
+        <div class="summary-metrics-item">
+          <div class="summary-metrics-label">Best Proposal – Avg Monthly Cost</div>
+          <div class="summary-metrics-value">$${Math.round(best.avgMonthlyCost).toLocaleString()}</div>
+          <div class="summary-metrics-sub">After free rent, over ${best.months} months</div>
+        </div>
+      `;
+    }
+
+    function updateCostChart(results, bestIndex) {
+      if (!costChartCanvas || bestIndex < 0 || !results.length) return;
+
+      const best = results[bestIndex];
+      const labels = best.monthlySeries.map((_, idx) => `M${idx + 1}`);
+      const data = best.monthlySeries;
+
+      const ctx = costChartCanvas.getContext("2d");
+      if (costChart) {
+        costChart.destroy();
+      }
+
+      costChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: `${best.name} – Monthly Collected Rent ($)`,
+              data,
+              tension: 0.2,
+              borderWidth: 2,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Month"
+              },
+              ticks: {
+                maxTicksLimit: 12
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: "Monthly Collected Rent ($)"
+              }
+            }
+          }
+        }
+      });
     }
 
     // Event listeners
@@ -512,6 +669,11 @@
       `;
       summaryPillEl.textContent =
         "Add proposals and click “Run Model” to see comparisons.";
+      summaryMetricsEl.innerHTML = "";
+      if (costChart) {
+        costChart.destroy();
+        costChart = null;
+      }
       proposalCounter = 0;
       createProposalCard("Base Case");
       createProposalCard("Alt 1");
