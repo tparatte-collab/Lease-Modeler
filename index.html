@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lease Proposal Financial Modeler</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.4;
+    }
+    body {
+      margin: 0;
+      background: #f5f5f7;
+      color: #111827;
+    }
+    header {
+      background: #111827;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.1rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    header span {
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }
+    main {
+      max-width: 1100px;
+      margin: 24px auto 40px;
+      padding: 0 16px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 16px 18px 18px;
+      box-shadow: 0 12px 22px rgba(15, 23, 42, 0.08);
+    }
+    .card h2 {
+      margin-top: 0;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #4b5563;
+    }
+    .description {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+    .proposal-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 540px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .proposal-card {
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      padding: 10px 12px 12px;
+      background: #f9fafb;
+    }
+    .proposal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .proposal-header input {
+      flex: 1;
+      padding: 6px 8px;
+      font-size: 0.9rem;
+    }
+    .badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      color: #4b5563;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    label {
+      display: block;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin-bottom: 2px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .field input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: white;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: #111827;
+      box-shadow: 0 0 0 1px #11182710;
+    }
+    .hint {
+      font-size: 0.7rem;
+      color: #9ca3af;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: #111827;
+      color: white;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: #9ca3af;
+    }
+    button:active {
+      transform: translateY(1px);
+    }
+
+    /* Results */
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .results-header h2 {
+      margin: 0;
+    }
+    .summary-pill {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    thead {
+      background: #f3f4f6;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: right;
+      white-space: nowrap;
+    }
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+    tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+    .metric-tag {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #111827;
+      color: white;
+    }
+    .highlight {
+      background: #ecfdf5 !important;
+    }
+    .empty-state {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      padding: 10px 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Lease Proposal Modeler</h1>
+    <span>Quick & dirty NER / PV comparison</span>
+  </header>
+
+  <main>
+    <div class="layout">
+      <!-- LEFT: INPUTS -->
+      <section class="card">
+        <h2>Inputs</h2>
+        <p class="description">
+          Add each lease proposal below. All rents are assumed to be quoted
+          <strong>$ / RSF / year</strong> with annual bumps on each anniversary.
+        </p>
+
+        <div class="proposal-list" id="proposalList"></div>
+
+        <div class="controls">
+          <button class="btn-secondary" id="addProposalBtn">＋ Add Proposal</button>
+          <button class="btn-primary" id="runModelBtn">Run Model</button>
+          <button class="btn-ghost" id="resetBtn">Reset</button>
+        </div>
+        <p class="hint" style="margin-top: 6px;">
+          Discount rate applies monthly (converted from annual). Free rent assumed at start of term.
+        </p>
+      </section>
+
+      <!-- RIGHT: RESULTS -->
+      <section class="card">
+        <div class="results-header">
+          <h2>Results</h2>
+          <div class="summary-pill" id="summaryPill">
+            Add proposals and click “Run Model” to see comparisons.
+          </div>
+        </div>
+
+        <div style="overflow-x:auto; max-height: 540px; overflow-y:auto;">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th>Proposal</th>
+                <th title="Rentable Square Feet">RSF</th>
+                <th title="Lease Term (Years)">Term (yrs)</th>
+                <th title="Starting annual rent $/RSF/yr">Start Rent<br>($/RSF/yr)</th>
+                <th title="Free rent period at beginning of term">Free Rent<br>(mos)</th>
+                <th title="Tenant Improvement allowance $/RSF">TI<br>($/RSF)</th>
+                <th title="Present Value of collected rent (after free rent)">PV of Rent<br>($)</th>
+                <th title="PV minus TI cost">PV Net of TI<br>($)</th>
+                <th title="(PV Net of TI) / RSF / year">Net Eff. Rent<br>($/RSF/yr)</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody">
+              <tr>
+                <td colspan="9" class="empty-state">
+                  No runs yet. Add a proposal on the left and hit “Run Model”.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const proposalListEl = document.getElementById("proposalList");
+    const addProposalBtn = document.getElementById("addProposalBtn");
+    const runModelBtn = document.getElementById("runModelBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const resultsBodyEl = document.getElementById("resultsBody");
+    const summaryPillEl = document.getElementById("summaryPill");
+
+    let proposalCounter = 0;
+
+    function createProposalCard(defaultName) {
+      proposalCounter++;
+      const wrapper = document.createElement("div");
+      wrapper.className = "proposal-card";
+      wrapper.dataset.proposalId = proposalCounter;
+
+      wrapper.innerHTML = `
+        <div class="proposal-header">
+          <input
+            type="text"
+            class="proposal-name"
+            value="${defaultName || "Proposal " + proposalCounter}"
+            placeholder="Proposal name (e.g., 100 Pine Direct 2300)"
+          />
+          <span class="badge">#${proposalCounter}</span>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label>RSF</label>
+            <input type="number" class="rsf" min="0" step="50" placeholder="e.g. 23000" />
+          </div>
+          <div class="field">
+            <label>Term (yrs)</label>
+            <input type="number" class="termYears" min="0" step="0.5" placeholder="e.g. 7" />
+          </div>
+          <div class="field">
+            <label>Start Rent ($/RSF/yr)</label>
+            <input type="number" class="startRent" min="0" step="0.5" placeholder="e.g. 60" />
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label>Annual Bump (%)</label>
+            <input type="number" class="bumpPct" min="0" step="0.25" placeholder="e.g. 3.0" />
+          </div>
+          <div class="field">
+            <label>Free Rent (mos)</label>
+            <input type="number" class="freeRentMonths" min="0" step="1" placeholder="e.g. 6" />
+          </div>
+          <div class="field">
+            <label>Disc. Rate (%/yr)</label>
+            <input type="number" class="discRate" min="0" step="0.5" placeholder="e.g. 7" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>TI ($/RSF)</label>
+            <input type="number" class="tiPerRSF" min="0" step="1" placeholder="e.g. 80" />
+          </div>
+          <div class="field">
+            <label>Notes</label>
+            <input type="text" class="notes" placeholder="expansion, options, etc. (not modeled)" />
+          </div>
+        </div>
+
+        <div class="controls" style="margin-top:4px;">
+          <button class="btn-ghost" type="button" onclick="removeProposal(${proposalCounter})">
+            Remove
+          </button>
+        </div>
+      `;
+
+      proposalListEl.appendChild(wrapper);
+    }
+
+    function removeProposal(id) {
+      const card = proposalListEl.querySelector(`[data-proposal-id="${id}"]`);
+      if (card) {
+        proposalListEl.removeChild(card);
+      }
+    }
+
+    function parseNumber(inputEl) {
+      if (!inputEl) return 0;
+      const val = parseFloat(inputEl.value);
+      return isNaN(val) ? 0 : val;
+    }
+
+    function collectProposals() {
+      const cards = Array.from(proposalListEl.querySelectorAll(".proposal-card"));
+      return cards.map(card => {
+        return {
+          name: card.querySelector(".proposal-name").value.trim() || "Untitled",
+          rsf: parseNumber(card.querySelector(".rsf")),
+          termYears: parseNumber(card.querySelector(".termYears")),
+          startRent: parseNumber(card.querySelector(".startRent")), // $/RSF/yr
+          bumpPct: parseNumber(card.querySelector(".bumpPct")) / 100, // decimal
+          freeRentMonths: parseNumber(card.querySelector(".freeRentMonths")),
+          discRate: parseNumber(card.querySelector(".discRate")) / 100, // decimal per year
+          tiPerRSF: parseNumber(card.querySelector(".tiPerRSF")) // $/RSF
+        };
+      }).filter(p => p.rsf > 0 && p.termYears > 0 && p.startRent > 0);
+    }
+
+    function runModel() {
+      const proposals = collectProposals();
+      if (!proposals.length) {
+        resultsBodyEl.innerHTML = `
+          <tr>
+            <td colspan="9" class="empty-state">
+              Please add at least one proposal with RSF, term, and starting rent.
+            </td>
+          </tr>
+        `;
+        summaryPillEl.textContent = "No valid proposals to model.";
+        return;
+      }
+
+      const results = proposals.map(p => {
+        const months = Math.round(p.termYears * 12);
+        const monthlyDiscRate = p.discRate > 0 ? Math.pow(1 + p.discRate, 1 / 12) - 1 : 0;
+
+        let pvRent = 0;
+        let totalRentCollected = 0;
+
+        for (let m = 1; m <= months; m++) {
+          const yearIndex = Math.floor((m - 1) / 12);
+          const currentAnnualRent = p.startRent * Math.pow(1 + p.bumpPct, yearIndex); // $/RSF/yr
+          const currentMonthlyRentPerRSF = currentAnnualRent / 12;
+          const scheduledRent = currentMonthlyRentPerRSF * p.rsf; // for that month
+
+          const isFree = m <= p.freeRentMonths;
+          const collectedRent = isFree ? 0 : scheduledRent;
+
+          totalRentCollected += collectedRent;
+
+          if (monthlyDiscRate > 0) {
+            const discFactor = Math.pow(1 + monthlyDiscRate, m);
+            pvRent += collectedRent / discFactor;
+          } else {
+            pvRent += collectedRent;
+          }
+        }
+
+        const totalTI = p.tiPerRSF * p.rsf;
+        const pvNetOfTI = pvRent - totalTI;
+        const nerPerRSFPerYear =
+          p.rsf > 0 && p.termYears > 0
+            ? pvNetOfTI / (p.rsf * p.termYears)
+            : 0;
+
+        return {
+          ...p,
+          months,
+          pvRent,
+          totalRentCollected,
+          totalTI,
+          pvNetOfTI,
+          nerPerRSFPerYear
+        };
+      });
+
+      // Find best (lowest) net effective rent
+      let bestIndex = -1;
+      let bestNER = Infinity;
+      results.forEach((r, idx) => {
+        if (r.nerPerRSFPerYear < bestNER) {
+          bestNER = r.nerPerRSFPerYear;
+          bestIndex = idx;
+        }
+      });
+
+      resultsBodyEl.innerHTML = "";
+      results.forEach((r, idx) => {
+        const tr = document.createElement("tr");
+        if (idx === bestIndex) {
+          tr.classList.add("highlight");
+        }
+        tr.innerHTML = `
+          <td>
+            ${r.name}
+            ${idx === bestIndex ? ' <span class="metric-tag">Best NER</span>' : ""}
+          </td>
+          <td>${r.rsf.toLocaleString()}</td>
+          <td>${r.termYears.toFixed(1)}</td>
+          <td>${r.startRent.toFixed(2)}</td>
+          <td>${r.freeRentMonths}</td>
+          <td>${r.tiPerRSF.toFixed(0)}</td>
+          <td>${r.pvRent.toFixed(0).toLocaleString()}</td>
+          <td>${r.pvNetOfTI.toFixed(0).toLocaleString()}</td>
+          <td>${r.nerPerRSFPerYear.toFixed(2)}</td>
+        `;
+        resultsBodyEl.appendChild(tr);
+      });
+
+      summaryPillEl.textContent =
+        `Modeled ${results.length} proposal${results.length > 1 ? "s" : ""}. ` +
+        (bestIndex >= 0
+          ? `Lowest net effective rent: ${results[bestIndex].name} at $${results[
+              bestIndex
+            ].nerPerRSFPerYear.toFixed(2)}/RSF/yr.`
+          : "");
+    }
+
+    // Event listeners
+    addProposalBtn.addEventListener("click", () => createProposalCard());
+    runModelBtn.addEventListener("click", runModel);
+    resetBtn.addEventListener("click", () => {
+      proposalListEl.innerHTML = "";
+      resultsBodyEl.innerHTML = `
+        <tr>
+          <td colspan="9" class="empty-state">
+            No runs yet. Add a proposal on the left and hit “Run Model”.
+          </td>
+        </tr>
+      `;
+      summaryPillEl.textContent =
+        "Add proposals and click “Run Model” to see comparisons.";
+      proposalCounter = 0;
+      createProposalCard("Base Case");
+      createProposalCard("Alt 1");
+    });
+
+    // Initialize with two proposals
+    createProposalCard("Base Case");
+    createProposalCard("Alt 1");
+  </script>
+</body>
+</html>
